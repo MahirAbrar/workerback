@@ -71,7 +71,7 @@ AUTHENTICATION_BACKENDS = [
 
 SITE_ID = 1  # Required for allauth
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Use email as the primary identifier
+ACCOUNT_ACCOUNT_LOGIN_METHODS = {'email'}  # Use email as the primary identifier
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification required
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_UNIQUE_EMAIL = True

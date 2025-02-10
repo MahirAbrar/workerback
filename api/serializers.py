@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, ExerciseList
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer as BaseLoginSerializer
 
@@ -46,3 +46,9 @@ class LoginSerializer(BaseLoginSerializer):
     def validate(self, attrs):
         attrs['username'] = attrs.get('email')  # Use email as username
         return super().validate(attrs) 
+
+class ExerciseListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExerciseList
+        fields = ('id', 'name', 'description', 'primary_muscle', 
+                 'secondary_muscle', 'tertiary_muscle', 'exercise_type') 

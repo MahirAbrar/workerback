@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from .models import User, ExerciseList
 
 class CustomUserAdmin(UserAdmin):
     list_display = ('email', 'username', 'created_at', 'is_staff')
@@ -18,3 +18,9 @@ class CustomUserAdmin(UserAdmin):
     )
 
 admin.site.register(User, CustomUserAdmin)
+
+@admin.register(ExerciseList)
+class ExerciseListAdmin(admin.ModelAdmin):
+    list_display = ('name', 'primary_muscle', 'secondary_muscle', 'tertiary_muscle')
+    search_fields = ('name', 'primary_muscle')
+    list_filter = ('primary_muscle', 'secondary_muscle', 'tertiary_muscle')
