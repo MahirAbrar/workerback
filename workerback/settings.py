@@ -112,6 +112,7 @@ WSGI_APPLICATION = "workerback.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# TODO: Hook up to an online database instead of SQLite
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -185,7 +186,7 @@ REST_AUTH = {
     'REGISTER_SERIALIZER': 'api.serializers.RegisterSerializer',
 }
 
-# JWT settings
+# JWT settings. 
 from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),

@@ -135,9 +135,30 @@ class WorkoutSerializer(serializers.Serializer):
             }
         ]"""
     )
+    time_completed = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+        help_text="Time of the workout (format: YYYY-MM-DDThh:mm:ssZ, e.g., 2024-03-20T14:30:00Z)"
+    )
+
+    workout_duration = serializers.DurationField(
+        required=False,
+        allow_null=True,
+        help_text="Duration of the workout (format: PT1H20M30S, e.g., PT1H20M30S) which means 1 hour 20 minutes and 30 seconds"
+    )
+
+    workout_notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Notes about the workout"
+    )
+    
 
     def validate_exercises(self, exercises):
+
+
         # Group exercises by exercise_id and add set numbers
+
         exercise_sets = {}
         processed_exercises = []
 
