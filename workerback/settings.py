@@ -67,12 +67,15 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',  # For allauth
 ]
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints emails to console
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints emails to console
 
 SITE_ID = 1  # Required for allauth
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Use email as the primary identifier
-ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Optional email verification
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification required
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_SESSION_REMEMBER = True
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -179,13 +182,8 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'auth-token',
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'USER_DETAILS_SERIALIZER': 'api.serializers.UserSerializer',
+    'REGISTER_SERIALIZER': 'api.serializers.RegisterSerializer',
 }
-
-# Additional allauth settings
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Change from 'optional' if you want to enforce email verification
 
 # JWT settings
 from datetime import timedelta
