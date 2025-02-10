@@ -10,6 +10,8 @@ from .models import ExerciseList
 from .serializers import ExerciseListSerializer
 from rest_framework.views import APIView
 from .serializers import UserSerializer
+from django.utils import timezone
+from .serializers import WorkoutSerializer
 
 # Create your views here.
 
@@ -53,3 +55,36 @@ class UserProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+class WorkoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = WorkoutSerializer(data=request.data)
+        if serializer.is_valid():
+            workout_data = {
+                'id': len(request.user.workouts) + 1,
+                'name': serializer.validated_data['name'],
+                'description': serializer.validated_data.get('description', ''),
+                'created_at': timezone.now().isoformat(),
+                'exercises': [{
+                    'exercise_id': exercise['exercise'].id,
+                    'name': exercise['exercise'].name,
+                    'set_number': exercise['set_number'],
+                    'reps': exercise.get('reps'),
+                    'weight': exercise.get('weight'),
+                    'duration_minutes': exercise.get('duration_minutes'),
+                    'distance_meters': exercise.get('distance_meters')
+                } for exercise in serializer.validated_data['exercises']]
+            }
+            
+            if request.user.workouts is None:
+                request.user.workouts = []
+            request.user.workouts.append(workout_data)
+            request.user.save()
+            
+            return Response(workout_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        return Response(request.user.workouts)

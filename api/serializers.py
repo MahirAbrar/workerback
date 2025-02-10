@@ -52,3 +52,57 @@ class ExerciseListSerializer(serializers.ModelSerializer):
         model = ExerciseList
         fields = ('id', 'name', 'description', 'primary_muscle', 
                  'secondary_muscle', 'tertiary_muscle', 'exercise_type') 
+
+class WorkoutExerciseSerializer(serializers.Serializer):
+    exercise_id = serializers.IntegerField()
+    reps = serializers.IntegerField(required=False, allow_null=True)
+    weight = serializers.FloatField(required=False, allow_null=True)
+    duration_minutes = serializers.IntegerField(required=False, allow_null=True)
+    distance_meters = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate(self, data):
+        try:
+            exercise = ExerciseList.objects.get(id=data['exercise_id'])
+        except ExerciseList.DoesNotExist:
+            raise serializers.ValidationError("Exercise not found")
+
+        # TODO: Deal with type in the frontend
+        # Validate based on exercise type
+        exercise_type = exercise.exercise_type
+        if exercise_type in ['Dumbbell Exercises', 'Barbell Exercises', 'Machine-Based Workouts', 
+                           'Kettlebell Workouts', 'Resistance Band Training', 'Cable Exercises']:
+            if not data.get('reps'):
+                raise serializers.ValidationError("Reps are required for this exercise type")
+            if not data.get('weight'):
+                raise serializers.ValidationError("Weight is required for this exercise type")
+        elif exercise_type == 'Cardiovascular Exercise':
+            if not data.get('duration_minutes'):
+                raise serializers.ValidationError("Duration is required for cardiovascular exercises")
+        elif exercise_type in ['Yoga and Flexibility Workouts', 'Core Stability Training', 'Agility Drills']:
+            if not data.get('duration_minutes'):
+                raise serializers.ValidationError("Duration is required for this exercise type")
+
+        data['exercise'] = exercise
+        return data
+
+class WorkoutSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    description = serializers.CharField(required=False, allow_blank=True)
+    exercises = WorkoutExerciseSerializer(many=True)
+
+    def validate_exercises(self, exercises):
+        # Group exercises by exercise_id and add set numbers
+        exercise_sets = {}
+        processed_exercises = []
+
+        for exercise in exercises:
+            exercise_id = exercise['exercise_id']
+            if exercise_id not in exercise_sets:
+                exercise_sets[exercise_id] = 1
+            else:
+                exercise_sets[exercise_id] += 1
+            
+            exercise['set_number'] = exercise_sets[exercise_id]
+            processed_exercises.append(exercise)
+
+        return processed_exercises 

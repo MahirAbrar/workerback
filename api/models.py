@@ -47,7 +47,7 @@ MUSCLE_CHOICES = [
     ('Transverse Abdominis', 'Transverse Abdominis'),
 ]
 
-EXERCISE_TYPE_CHOICES = ["Dumbbell Exercises", "Barbell Exercises", "Machine-Based Workouts", "Bodyweight Training", "Kettlebell Workouts", "Resistance Band Training", "Cable Exercises", "Cardiovascular Exercise", "High-Intensity Interval Training", "Functional Movement Training", "Plyometric Exercises", "Yoga and Flexibility Workouts", "Core Stability Training", "Endurance Training", "Agility Drills", "Balance and Stability Exercises", "Powerlifting", "Olympic Lifting", "Calisthenics", "Aquatic Fitness", "Outdoor Adventure Fitness"]
+EXERCISE_TYPE_CHOICES = ["Dumbbell Exercises", "Barbell Exercises", "Machine-Based Workouts", "Bodyweight Training", "Kettlebell Workouts", "Resistance Band Training", "Cable Exercises", "Cardiovascular Exercise", "Yoga and Flexibility Workouts", "Core Stability Training",  "Agility Drills", "Calisthenics"]
 
 
 class ExerciseList(models.Model):
