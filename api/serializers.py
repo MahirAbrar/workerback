@@ -54,11 +54,36 @@ class ExerciseListSerializer(serializers.ModelSerializer):
                  'secondary_muscle', 'tertiary_muscle', 'exercise_type') 
 
 class WorkoutExerciseSerializer(serializers.Serializer):
-    exercise_id = serializers.IntegerField()
-    reps = serializers.IntegerField(required=False, allow_null=True)
-    weight = serializers.FloatField(required=False, allow_null=True)
-    duration_minutes = serializers.IntegerField(required=False, allow_null=True)
-    distance_meters = serializers.IntegerField(required=False, allow_null=True)
+    exercise_id = serializers.IntegerField(
+        help_text="ID of the exercise from the exercise list. Go to http://127.0.0.1:8000/api/exercises/ to get the list"
+    )
+    reps = serializers.IntegerField(
+        required=False, 
+        allow_null=True,
+        help_text="Number of repetitions",
+        min_value=0
+
+    )
+    weight = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Weight in kg",
+        min_value=0
+
+    )
+    duration_minutes = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Duration in minutes (cardio/yoga exercises)",
+        min_value=0
+    )
+    distance_meters = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Distance in meters (optional for cardio exercises)",
+        min_value=0
+    )
+
 
     def validate(self, data):
         try:
@@ -75,20 +100,41 @@ class WorkoutExerciseSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Reps are required for this exercise type")
             if not data.get('weight'):
                 raise serializers.ValidationError("Weight is required for this exercise type")
-        elif exercise_type == 'Cardiovascular Exercise':
-            if not data.get('duration_minutes'):
-                raise serializers.ValidationError("Duration is required for cardiovascular exercises")
-        elif exercise_type in ['Yoga and Flexibility Workouts', 'Core Stability Training', 'Agility Drills']:
+        elif exercise_type in ['Cardiovascular Exercise', 'Yoga and Flexibility Workouts']:
             if not data.get('duration_minutes'):
                 raise serializers.ValidationError("Duration is required for this exercise type")
+        elif exercise_type == 'Bodyweight Training':
+            if not data.get('reps'):
+                raise serializers.ValidationError("Reps are required for bodyweight exercises")
 
         data['exercise'] = exercise
         return data
 
 class WorkoutSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100)
-    description = serializers.CharField(required=False, allow_blank=True)
-    exercises = WorkoutExerciseSerializer(many=True)
+    name = serializers.CharField(
+        max_length=100,
+        help_text="Name of your workout"
+    )
+    description = serializers.CharField(
+        required=False, 
+        allow_blank=True,
+        help_text="Optional description of your workout"
+    )
+    exercises = WorkoutExerciseSerializer(
+        many=True,
+        help_text="""List of exercises in your workout. Example format:
+        [
+            {
+                "exercise_id": 1,
+                "reps": 12,
+                "weight": 20
+            },
+            {
+                "exercise_id": 2,
+                "duration_minutes": 10
+            }
+        ]"""
+    )
 
     def validate_exercises(self, exercises):
         # Group exercises by exercise_id and add set numbers
