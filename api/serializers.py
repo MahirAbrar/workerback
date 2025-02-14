@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, ExerciseList
+from .models import User, ExerciseList, MUSCLE_CHOICES, EXERCISE_TYPE_CHOICES
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer as BaseLoginSerializer
 
@@ -253,3 +253,81 @@ class TemplateSerializer(serializers.Serializer):
             processed_exercises.append(exercise)
 
         return processed_exercises 
+    
+    
+class CustomExerciseSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(
+        required=True,
+        max_length=100,
+        help_text="Name of your custom exercise",
+        style={'placeholder': 'Enter exercise name'}
+    )
+    description = serializers.CharField(
+        required=False, 
+        allow_blank=True,
+        help_text="Description of your custom exercise",
+        style={'placeholder': 'Enter exercise description'}
+    )
+    primary_muscle = serializers.ChoiceField(
+        choices=MUSCLE_CHOICES,
+        help_text="Primary muscle worked",
+        style={'placeholder': 'Select primary muscle'}
+    )
+    secondary_muscle = serializers.ChoiceField(
+        choices=MUSCLE_CHOICES,
+        required=False,
+        allow_null=True,
+        help_text="Secondary muscle worked",
+        style={'placeholder': 'Select secondary muscle'}
+    )
+    tertiary_muscle = serializers.ChoiceField(
+        choices=MUSCLE_CHOICES,
+        required=False,
+        allow_null=True,
+        help_text="Tertiary muscle worked",
+        style={'placeholder': 'Select tertiary muscle'}
+    )
+    exercise_type = serializers.ChoiceField(
+        choices=[(t, t) for t in EXERCISE_TYPE_CHOICES],
+        help_text="Type of exercise",
+        style={'placeholder': 'Select exercise type'}
+    )
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def validate_name(self, value):
+        """
+        Check that the exercise name is unique for this user
+        """
+        request = self.context.get('request')
+        exercise_id = self.context.get('exercise_id')
+        
+        if request and request.user:
+            existing_exercises = request.user.custom_exercises or []
+            value = value.strip()
+            
+            # For new exercises (POST)
+            if not exercise_id:
+                if any(ex['name'].lower() == value.lower() for ex in existing_exercises):
+                    raise serializers.ValidationError(
+                        "You already have an exercise with this name"
+                    )
+            # For updates (PUT)
+            else:
+                if any(ex['name'].lower() == value.lower() and ex['id'] != exercise_id 
+                      for ex in existing_exercises):
+                    raise serializers.ValidationError(
+                        "You already have an exercise with this name"
+                    )
+        return value
+
+    def to_representation(self, instance):
+        """
+        Convert the exercise instance to a dictionary for response.
+        """
+        data = super().to_representation(instance)
+        if isinstance(instance, dict):
+            data['created_at'] = instance.get('created_at', '')
+            data['updated_at'] = instance.get('updated_at', '')
+        return data 
