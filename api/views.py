@@ -15,6 +15,7 @@ from .serializers import WorkoutSerializer
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.decorators import schema
 from .serializers import TemplateSerializer
+# from .serializers import CustomExerciseSerializer
 
 # Create your views here.
 
@@ -214,3 +215,118 @@ class WorkoutView(ListCreateAPIView):
         self.request.user.workouts.append(workout_data)
         self.request.user.save()
         return workout_data
+
+# class CustomExerciseView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     
+#     def get(self, request, exercise_id=None):
+#         """Get all custom exercises or a specific one"""
+#         if exercise_id is not None:
+#             exercises = request.user.custom_exercises or []
+#             exercise = next((ex for ex in exercises if ex["id"] == exercise_id), None)
+#             if exercise is None:
+#                 return Response(
+#                     {"error": "Exercise not found"}, 
+#                     status=status.HTTP_404_NOT_FOUND
+#                 )
+#             serializer = CustomExerciseSerializer(exercise)
+#             return Response(serializer.data)
+#         
+#         exercises = request.user.custom_exercises or []
+#         serializer = CustomExerciseSerializer(exercises, many=True)
+#         return Response(serializer.data)
+# 
+#     def post(self, request, exercise_id=None):
+#         """Create a new custom exercise"""
+#         if exercise_id is not None:
+#             return Response(
+#                 {"error": "Cannot POST to a specific exercise ID. Use PUT for updates."},
+#                 status=status.HTTP_405_METHOD_NOT_ALLOWED
+#             )
+# 
+#         serializer = CustomExerciseSerializer(
+#             data=request.data,
+#             context={'request': request}
+#         )
+#         if serializer.is_valid():
+#             exercise_data = {
+#                 'id': len(request.user.custom_exercises or []) + 1,
+#                 **serializer.validated_data,
+#                 'created_at': timezone.now().isoformat(),
+#                 'updated_at': timezone.now().isoformat()
+#             }
+#             
+#             if request.user.custom_exercises is None:
+#                 request.user.custom_exercises = []
+#             request.user.custom_exercises.append(exercise_data)
+#             request.user.save()
+#             
+#             return Response(
+#                 CustomExerciseSerializer(exercise_data).data, 
+#                 status=status.HTTP_201_CREATED
+#             )
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# 
+#     def put(self, request, exercise_id):
+#         """Update a custom exercise"""
+#         if exercise_id is None:
+#             return Response(
+#                 {"error": "Exercise ID is required for updates"},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+# 
+#         exercises = request.user.custom_exercises or []
+#         exercise_index = next(
+#             (index for (index, d) in enumerate(exercises) if d["id"] == exercise_id), 
+#             None
+#         )
+#         
+#         if exercise_index is None:
+#             return Response(
+#                 {"error": "Exercise not found"}, 
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+# 
+#         serializer = CustomExerciseSerializer(
+#             exercises[exercise_index],
+#             data=request.data,
+#             context={'request': request, 'exercise_id': exercise_id}
+#         )
+#         if serializer.is_valid():
+#             exercise_data = {
+#                 'id': exercise_id,
+#                 **serializer.validated_data,
+#                 'created_at': exercises[exercise_index].get('created_at'),
+#                 'updated_at': timezone.now().isoformat()
+#             }
+#             
+#             exercises[exercise_index] = exercise_data
+#             request.user.custom_exercises = exercises
+#             request.user.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# 
+#     def delete(self, request, exercise_id):
+#         """Delete a custom exercise"""
+#         if exercise_id is None:
+#             return Response(
+#                 {"error": "Exercise ID is required for deletion"},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+# 
+#         exercises = request.user.custom_exercises or []
+#         exercise_index = next(
+#             (index for (index, d) in enumerate(exercises) if d["id"] == exercise_id), 
+#             None
+#         )
+#         
+#         if exercise_index is None:
+#             return Response(
+#                 {"error": "Exercise not found"}, 
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+# 
+#         exercises.pop(exercise_index)
+#         request.user.custom_exercises = exercises
+#         request.user.save()
+#         return Response(status=status.HTTP_204_NO_CONTENT)

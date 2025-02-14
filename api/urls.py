@@ -1,7 +1,7 @@
 from django.urls import path, include
 from .views import (
     RegisterView, LoginView, ExerciseListView, 
-    UserProfileView, WorkoutView, TemplateView
+    UserProfileView, WorkoutView, TemplateView, CustomExerciseView
 )
 
 urlpatterns = [
@@ -15,4 +15,6 @@ urlpatterns = [
     path('workouts/', WorkoutView.as_view(), name='workouts'),
     path('templates/', TemplateView.as_view(), name='templates'),
     path('templates/<int:template_id>/', TemplateView.as_view(), name='template-detail'),
+    # path('custom-exercises/', CustomExerciseView.as_view(), name='custom-exercises'),
+    # path('custom-exercises/<int:exercise_id>/', CustomExerciseView.as_view(), name='custom-exercise-detail'),
 ] 

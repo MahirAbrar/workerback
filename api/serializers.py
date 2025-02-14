@@ -39,8 +39,7 @@ class RegisterSerializer(RegisterSerializer):
         } 
 
 class LoginSerializer(BaseLoginSerializer):
-    username = None  # Remove username field
-    email = serializers.EmailField(required=True)
+    username = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
     def validate(self, attrs):
