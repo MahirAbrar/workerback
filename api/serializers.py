@@ -173,3 +173,84 @@ class WorkoutSerializer(serializers.Serializer):
             processed_exercises.append(exercise)
 
         return processed_exercises 
+
+class TemplateExerciseSerializer(serializers.Serializer):
+    exercise_id = serializers.IntegerField(
+        help_text="ID of the exercise from the exercise list"
+    )
+    reps = serializers.IntegerField(
+        required=False, 
+        allow_null=True,
+        help_text="Number of repetitions",
+        min_value=0
+    )
+    weight = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Weight in kg",
+        min_value=0
+    )
+    duration_minutes = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Duration in minutes (cardio/yoga exercises)",
+        min_value=0
+    )
+    distance_meters = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Distance in meters (optional for cardio exercises)",
+        min_value=0
+    )
+
+    def validate(self, data):
+        try:
+            exercise = ExerciseList.objects.get(id=data['exercise_id'])
+        except ExerciseList.DoesNotExist:
+            raise serializers.ValidationError("Exercise not found")
+
+        exercise_type = exercise.exercise_type
+        if exercise_type in ['Dumbbell Exercises', 'Barbell Exercises', 'Machine-Based Workouts', 
+                           'Kettlebell Workouts', 'Resistance Band Training', 'Cable Exercises']:
+            if not data.get('reps'):
+                raise serializers.ValidationError("Reps are required for this exercise type")
+        elif exercise_type in ['Cardiovascular Exercise', 'Yoga and Flexibility Workouts']:
+            if not data.get('duration_minutes'):
+                raise serializers.ValidationError("Duration is required for this exercise type")
+        elif exercise_type == 'Bodyweight Training':
+            if not data.get('reps'):
+                raise serializers.ValidationError("Reps are required for bodyweight exercises")
+
+        data['exercise'] = exercise
+        return data
+
+class TemplateSerializer(serializers.Serializer):
+    name = serializers.CharField(
+        max_length=100,
+        help_text="Name of your template"
+    )
+    description = serializers.CharField(
+        required=False, 
+        allow_blank=True,
+        help_text="Optional description of your template"
+    )
+    exercises = TemplateExerciseSerializer(
+        many=True,
+        help_text="List of exercises in your template"
+    )
+
+    def validate_exercises(self, exercises):
+        exercise_sets = {}
+        processed_exercises = []
+
+        for exercise in exercises:
+            exercise_id = exercise['exercise_id']
+            if exercise_id not in exercise_sets:
+                exercise_sets[exercise_id] = 1
+            else:
+                exercise_sets[exercise_id] += 1
+            
+            exercise['set_number'] = exercise_sets[exercise_id]
+            processed_exercises.append(exercise)
+
+        return processed_exercises 

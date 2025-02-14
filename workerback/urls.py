@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from api.views import RegisterView, LoginView, ExerciseListView, UserProfileView, WorkoutView
+from api.views import RegisterView, LoginView, ExerciseListView, UserProfileView, WorkoutView, TemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,4 +11,6 @@ urlpatterns = [
     path('api/exercises/', ExerciseListView.as_view(), name='exercise-list'),  # New URL
     path('api/profile/', UserProfileView.as_view(), name='user-profile'),  # New endpoint
     path('api/workouts/', WorkoutView.as_view(), name='workouts'),
+    path('api/templates/', TemplateView.as_view(), name='templates'),
+    path('api/templates/<int:template_id>/', TemplateView.as_view(), name='template-detail'),
 ]
