@@ -301,7 +301,7 @@ class CustomExerciseSerializer(serializers.Serializer):
         Check that the exercise name is unique for this user
         """
         request = self.context.get('request')
-        exercise_id = self.context.get('exercise_id')
+        exercise_id = self.context.get('exercise_id')  # This will now be available during PUT requests
         
         if request and request.user:
             existing_exercises = request.user.custom_exercises or []

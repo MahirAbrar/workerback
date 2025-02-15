@@ -1,6 +1,7 @@
 # Django imports
 from django.shortcuts import render
 from django.utils import timezone
+from django.http import Http404
 
 # Rest Framework imports
 from rest_framework import generics, status
@@ -240,3 +241,53 @@ class CustomExerciseView(generics.ListCreateAPIView):
         self.request.user.custom_exercises.append(exercise_data)
         self.request.user.save()
         return exercise_data
+
+class CustomExerciseDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomExerciseSerializer
+    lookup_field = 'exercise_id'
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if 'exercise_id' in self.kwargs:
+            context['exercise_id'] = int(self.kwargs['exercise_id'])
+        return context
+
+    def get_object(self):
+        exercise_id = int(self.kwargs['exercise_id'])
+        exercises = self.request.user.custom_exercises or []
+        exercise = next((ex for ex in exercises if ex['id'] == exercise_id), None)
+        if exercise is None:
+            raise Http404("Exercise not found")
+        return exercise
+
+    def perform_update(self, serializer):
+        exercise_id = int(self.kwargs['exercise_id'])
+        exercises = self.request.user.custom_exercises or []
+        exercise_index = next((index for (index, ex) in enumerate(exercises) 
+                             if ex['id'] == exercise_id), None)
+        
+        if exercise_index is None:
+            raise Http404("Exercise not found")
+
+        # Keep the existing created_at and id, update the rest
+        exercises[exercise_index].update({
+            **serializer.validated_data,
+            'updated_at': timezone.now().isoformat()
+        })
+        
+        self.request.user.custom_exercises = exercises
+        self.request.user.save()
+
+    def perform_destroy(self, instance):
+        exercise_id = int(self.kwargs['exercise_id'])
+        exercises = self.request.user.custom_exercises or []
+        exercise_index = next((index for (index, ex) in enumerate(exercises) 
+                             if ex['id'] == exercise_id), None)
+        
+        if exercise_index is None:
+            raise Http404("Exercise not found")
+
+        exercises.pop(exercise_index)
+        self.request.user.custom_exercises = exercises
+        self.request.user.save()

@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
-from api.views import RegisterView, LoginView, ExerciseListView, UserProfileView, WorkoutView, TemplateView, CustomExerciseView
+from api.views import (
+    RegisterView, LoginView, ExerciseListView, UserProfileView, 
+    WorkoutView, TemplateView, CustomExerciseView, CustomExerciseDetailView
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,5 +17,5 @@ urlpatterns = [
     path('api/templates/', TemplateView.as_view(), name='templates'),
     path('api/templates/<int:template_id>/', TemplateView.as_view(), name='template-detail'),
     path('api/custom-exercises/', CustomExerciseView.as_view(), name='custom-exercises'),
-    # path('api/custom-exercises/<int:exercise_id>/', CustomExerciseView.as_view(), name='custom-exercise-detail'),
+    path('api/custom-exercises/<int:exercise_id>/', CustomExerciseDetailView.as_view(), name='custom-exercise-detail'),
 ]
