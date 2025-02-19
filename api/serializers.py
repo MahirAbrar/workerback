@@ -61,14 +61,12 @@ class WorkoutExerciseSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Number of repetitions",
         min_value=0
-
     )
     weight = serializers.FloatField(
         required=False, 
         allow_null=True,
         help_text="Weight in kg",
         min_value=0
-
     )
     duration_minutes = serializers.FloatField(
         required=False, 
@@ -82,7 +80,8 @@ class WorkoutExerciseSerializer(serializers.Serializer):
         help_text="Distance in meters (optional for cardio exercises)",
         min_value=0
     )
-
+    volume = serializers.FloatField(read_only=True)
+    one_rm = serializers.FloatField(read_only=True)
 
     def validate(self, data):
         try:
@@ -97,14 +96,30 @@ class WorkoutExerciseSerializer(serializers.Serializer):
                            'Kettlebell Workouts', 'Resistance Band Training', 'Cable Exercises']:
             if not data.get('reps'):
                 raise serializers.ValidationError("Reps are required for this exercise type")
-            if not data.get('weight'):
-                raise serializers.ValidationError("Weight is required for this exercise type")
+            
+            # Calculate volume and one_rm for weight-based exercises
+            if data.get('weight'):
+                # Volume = reps × weight
+                data['volume'] = float(data['reps']) * float(data['weight'])
+                
+                # Epley Formula for 1RM
+                # 1RM = weight × (36 / (37 - reps))
+                data['one_rm'] = float(data['weight']) * (36 / (37 - float(data['reps'])))
+            else:
+                data['volume'] = 0
+                data['one_rm'] = 0
+
         elif exercise_type in ['Cardiovascular Exercise', 'Yoga and Flexibility Workouts']:
             if not data.get('duration_minutes'):
                 raise serializers.ValidationError("Duration is required for this exercise type")
+            data['volume'] = 0
+            data['one_rm'] = 0
         elif exercise_type == 'Bodyweight Training':
             if not data.get('reps'):
                 raise serializers.ValidationError("Reps are required for bodyweight exercises")
+            # For bodyweight, volume is just the number of reps
+            data['volume'] = float(data['reps'])
+            data['one_rm'] = 0
 
         data['exercise'] = exercise
         return data
@@ -154,24 +169,46 @@ class WorkoutSerializer(serializers.Serializer):
     
 
     def validate_exercises(self, exercises):
-
-
-        # Group exercises by exercise_id and add set numbers
-
         exercise_sets = {}
+        exercise_volumes = {}
+        exercise_durations = {}
         processed_exercises = []
 
         for exercise in exercises:
             exercise_id = exercise['exercise_id']
+            
+            # Initialize tracking for new exercise
             if exercise_id not in exercise_sets:
                 exercise_sets[exercise_id] = 1
+                exercise_volumes[exercise_id] = 0
+                exercise_durations[exercise_id] = 0
             else:
                 exercise_sets[exercise_id] += 1
-            
+
+            # Add set number to exercise
             exercise['set_number'] = exercise_sets[exercise_id]
+            
+            # Add current set's volume to total if it exists
+            if 'volume' in exercise and exercise['volume'] is not None:
+                exercise_volumes[exercise_id] += exercise['volume']
+            
+            # Add current set's duration to total if it exists
+            if 'duration_minutes' in exercise and exercise['duration_minutes'] is not None:
+                exercise_durations[exercise_id] += exercise['duration_minutes']
+            
+            # Add total volume and duration for this exercise to each set
+            exercise['total_volume'] = exercise_volumes[exercise_id]
+            exercise['total_duration'] = exercise_durations[exercise_id]
+            
+            # Update personal records only for completed workouts
+            request = self.context.get('request')
+            if request and request.user:
+                request.user.update_personal_records(exercise_id, exercise)
+                request.user.save()
+            
             processed_exercises.append(exercise)
 
-        return processed_exercises 
+        return processed_exercises
 
 class TemplateExerciseSerializer(serializers.Serializer):
     exercise_id = serializers.IntegerField(
@@ -201,6 +238,9 @@ class TemplateExerciseSerializer(serializers.Serializer):
         help_text="Distance in meters (optional for cardio exercises)",
         min_value=0
     )
+    #for 1 set
+    volume = serializers.FloatField(read_only=True) #Read only means that the field is not required
+    one_rm = serializers.FloatField(read_only=True) #Calculated automatically
 
     def validate(self, data):
         try:
@@ -213,12 +253,30 @@ class TemplateExerciseSerializer(serializers.Serializer):
                            'Kettlebell Workouts', 'Resistance Band Training', 'Cable Exercises']:
             if not data.get('reps'):
                 raise serializers.ValidationError("Reps are required for this exercise type")
+            
+            # Calculate volume and one_rm for weight-based exercises
+            if data.get('weight'):
+                # Volume = reps × weight
+                data['volume'] = float(data['reps']) * float(data['weight'])
+                
+                # TODO: Epley Formula for 1RM
+                # 1RM = weight × (36 / (37 - reps))
+                data['one_rm'] = float(data['weight']) * (36 / (37 - float(data['reps'])))
+            else:
+                data['volume'] = 0
+                data['one_rm'] = 0
+
         elif exercise_type in ['Cardiovascular Exercise', 'Yoga and Flexibility Workouts']:
             if not data.get('duration_minutes'):
                 raise serializers.ValidationError("Duration is required for this exercise type")
+            data['volume'] = 0
+            data['one_rm'] = 0
         elif exercise_type == 'Bodyweight Training':
             if not data.get('reps'):
                 raise serializers.ValidationError("Reps are required for bodyweight exercises")
+            # For bodyweight, volume is just the number of reps
+            data['volume'] = float(data['reps'])
+            data['one_rm'] = 0
 
         data['exercise'] = exercise
         return data
@@ -239,20 +297,40 @@ class TemplateSerializer(serializers.Serializer):
     )
 
     def validate_exercises(self, exercises):
-        exercise_sets = {}
+        exercise_sets = {}  # Track sets per exercise
+        exercise_volumes = {}  # Track total volume per exercise
+        exercise_durations = {}  # Track total duration per exercise
         processed_exercises = []
 
         for exercise in exercises:
             exercise_id = exercise['exercise_id']
+            
+            # Initialize tracking for new exercise
             if exercise_id not in exercise_sets:
                 exercise_sets[exercise_id] = 1
+                exercise_volumes[exercise_id] = 0
+                exercise_durations[exercise_id] = 0
             else:
                 exercise_sets[exercise_id] += 1
-            
+
+            # Add set number to exercise
             exercise['set_number'] = exercise_sets[exercise_id]
+            
+            # Add current set's volume to total
+            if 'volume' in exercise:
+                exercise_volumes[exercise_id] += exercise['volume']
+            
+            # Add current set's duration to total
+            if 'duration_minutes' in exercise:
+                exercise_durations[exercise_id] += exercise['duration_minutes']
+            
+            # Add total volume and duration for this exercise to each set
+            exercise['total_volume'] = exercise_volumes[exercise_id]
+            exercise['total_duration'] = exercise_durations[exercise_id]
+            
             processed_exercises.append(exercise)
 
-        return processed_exercises 
+        return processed_exercises
     
     
 class CustomExerciseSerializer(serializers.Serializer):

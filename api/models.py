@@ -8,6 +8,7 @@ class User(AbstractUser):
     custom_exercises = models.JSONField(default=list, blank=True)
     workouts = models.JSONField(default=list, blank=True)
     templates = models.JSONField(default=list, blank=True)
+    personal_records = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     # Make email the required field instead of username
@@ -16,6 +17,53 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def update_personal_records(self, exercise_id, exercise_data):
+        """
+        Update personal records for a given exercise if any records are broken
+        """
+        if self.personal_records is None:
+            self.personal_records = {}
+            
+        str_exercise_id = str(exercise_id)  # JSON keys must be strings
+        current_records = self.personal_records.get(str_exercise_id, {
+            'max_volume_total': 0,
+            'max_volume_single_set': 0,
+            'max_one_rm': 0,
+            'max_duration_single_set': 0,
+            'max_duration_total': 0,
+            'max_reps_single_set': 0,
+            'max_weight': 0,
+        })
+
+        # Update records if broken, handling None values
+        total_volume = exercise_data.get('total_volume', 0) or 0
+        single_volume = exercise_data.get('volume', 0) or 0
+        one_rm = exercise_data.get('one_rm', 0) or 0
+        duration = exercise_data.get('duration_minutes', 0) or 0
+        reps = exercise_data.get('reps', 0) or 0
+        weight = exercise_data.get('weight', 0) or 0
+
+        if total_volume > current_records['max_volume_total']:
+            current_records['max_volume_total'] = total_volume
+            
+        if single_volume > current_records['max_volume_single_set']:
+            current_records['max_volume_single_set'] = single_volume
+            
+        if one_rm > current_records['max_one_rm']:
+            current_records['max_one_rm'] = one_rm
+            
+        if duration > current_records['max_duration_single_set']:
+            current_records['max_duration_single_set'] = duration
+            
+        if reps > current_records['max_reps_single_set']:
+            current_records['max_reps_single_set'] = reps
+            
+        if weight > current_records['max_weight']:
+            current_records['max_weight'] = weight
+
+        # Update the records in the dictionary
+        self.personal_records[str_exercise_id] = current_records
 
 MUSCLE_CHOICES = [
     ('Upper Chest', 'Upper Chest'),

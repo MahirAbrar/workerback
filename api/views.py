@@ -210,12 +210,30 @@ class WorkoutView(ListCreateAPIView):
                 'reps': exercise.get('reps'),
                 'weight': exercise.get('weight'),
                 'duration_minutes': exercise.get('duration_minutes'),
-                'distance_meters': exercise.get('distance_meters')
+                'distance_meters': exercise.get('distance_meters'),
+                'volume': exercise.get('volume', 0),
+                'one_rm': exercise.get('one_rm', 0),
+                'total_volume': exercise.get('total_volume', 0),
+                'total_duration': exercise.get('total_duration', 0)
             } for exercise in serializer.validated_data['exercises']]
         }
         
         if self.request.user.workouts is None:
             self.request.user.workouts = []
+        
+        for exercise in serializer.validated_data['exercises']:
+            self.request.user.update_personal_records(
+                exercise['exercise'].id, 
+                {
+                    'volume': exercise.get('volume', 0),
+                    'one_rm': exercise.get('one_rm', 0),
+                    'total_volume': exercise.get('total_volume', 0),
+                    'reps': exercise.get('reps'),
+                    'weight': exercise.get('weight'),
+                    'duration_minutes': exercise.get('duration_minutes')
+                }
+            )
+
         self.request.user.workouts.append(workout_data)
         self.request.user.save()
         return workout_data
