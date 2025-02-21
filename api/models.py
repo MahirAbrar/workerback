@@ -18,6 +18,7 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+    # Update personal records for a given exercise if any records are broken
     def update_personal_records(self, exercise_id, exercise_data):
         """
         Update personal records for a given exercise if any records are broken

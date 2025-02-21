@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'email', 'username', 'custom_exercises', 
-                 'workouts', 'templates', 'created_at')
+                 'workouts', 'templates', 'personal_records', 'created_at')
         read_only_fields = ('id', 'created_at')
 
 
@@ -83,6 +83,7 @@ class WorkoutExerciseSerializer(serializers.Serializer):
     volume = serializers.FloatField(read_only=True)
     one_rm = serializers.FloatField(read_only=True)
 
+    # Validate if the exercise exists and contains the required fields based on the exercise type
     def validate(self, data):
         try:
             exercise = ExerciseList.objects.get(id=data['exercise_id'])
@@ -199,12 +200,6 @@ class WorkoutSerializer(serializers.Serializer):
             # Add total volume and duration for this exercise to each set
             exercise['total_volume'] = exercise_volumes[exercise_id]
             exercise['total_duration'] = exercise_durations[exercise_id]
-            
-            # Update personal records only for completed workouts
-            request = self.context.get('request')
-            if request and request.user:
-                request.user.update_personal_records(exercise_id, exercise)
-                request.user.save()
             
             processed_exercises.append(exercise)
 

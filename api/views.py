@@ -220,20 +220,23 @@ class WorkoutView(ListCreateAPIView):
         
         if self.request.user.workouts is None:
             self.request.user.workouts = []
-        
+
+        # PERSONAL RECORDS
+        # Update PERSONAL RECORDS for each exercise
         for exercise in serializer.validated_data['exercises']:
             self.request.user.update_personal_records(
-                exercise['exercise'].id, 
+                exercise['exercise'].id,
                 {
                     'volume': exercise.get('volume', 0),
                     'one_rm': exercise.get('one_rm', 0),
                     'total_volume': exercise.get('total_volume', 0),
-                    'reps': exercise.get('reps'),
-                    'weight': exercise.get('weight'),
-                    'duration_minutes': exercise.get('duration_minutes')
+                    'total_duration': exercise.get('total_duration', 0),
+                    'reps': exercise.get('reps', 0),
+                    'weight': exercise.get('weight', 0),
+                    'duration_minutes': exercise.get('duration_minutes', 0)
                 }
             )
-
+        
         self.request.user.workouts.append(workout_data)
         self.request.user.save()
         return workout_data
