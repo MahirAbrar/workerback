@@ -1,7 +1,8 @@
 from django.urls import path, include
 from .views import (
     RegisterView, LoginView, ExerciseListView, 
-    UserProfileView, WorkoutView, TemplateView, CustomExerciseView, CustomExerciseDetailView
+    UserProfileView, WorkoutView, TemplateView, CustomExerciseView, CustomExerciseDetailView,
+    PersonalRecordsView
 )
 
 urlpatterns = [
@@ -17,4 +18,7 @@ urlpatterns = [
     path('templates/<int:template_id>/', TemplateView.as_view(), name='template-detail'),
     path('custom-exercises/', CustomExerciseView.as_view(), name='custom-exercises'),
     path('custom-exercises/<int:exercise_id>/', CustomExerciseDetailView.as_view(), name='custom-exercise-detail'),
+    # as_view() is a method that converts the class into a view which means it can be accessed in the URL
+    # which will return a response from the API
+    path('personal-records/', PersonalRecordsView.as_view(), name='personal-records'),
 ] 

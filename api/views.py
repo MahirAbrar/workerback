@@ -312,3 +312,38 @@ class CustomExerciseDetailView(generics.RetrieveUpdateDestroyAPIView):
         exercises.pop(exercise_index)
         self.request.user.custom_exercises = exercises
         self.request.user.save()
+
+# View for handling personal records endpoints
+# This function is accessible in URLs.py API
+class PersonalRecordsView(APIView):
+    # Without this line, any user (even unauthenticated) could access personal records
+    permission_classes = [IsAuthenticated]
+    
+    # Without this method, the view wouldn't handle GET requests
+    def get(self, request):
+        # Without this line, we wouldn't have access to the exercise names and types. Imported from models.py
+        exercises = ExerciseList.objects.all()
+        
+        # Without this initialization, we'd get an error trying to add to records
+        records = {}
+
+        # Checks if the user has any personal records for each exercise
+        for exercise in exercises:
+            # Why convert to string?
+            # Because JSON only accepts string keys and exercise.id is an integer
+            str_exercise_id = str(exercise.id)
+
+            # Without this check, we'd try to access non-existent records
+            if str_exercise_id in request.user.personal_records:
+                # Without these fields, the frontend wouldn't know which exercise the records belong to
+                # exercise.name and exercise.exercise_type makes it easier to identify the exercise
+                records[str_exercise_id] = {
+                    'exercise_name': exercise.name,
+                    'exercise_type': exercise.exercise_type,
+                    # Showcase the actual PR data
+                    **request.user.personal_records[str_exercise_id]
+                }
+        
+        # Without Response(), Django wouldn't properly format the JSON response
+        # because Response() is a function that returns a object 
+        return Response(records)
