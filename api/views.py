@@ -59,7 +59,8 @@ class ExerciseListView(generics.ListCreateAPIView):
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
-    
+    # request.user only returns the user object if the user is authenticated
+    # Django does not allow unauthenticated users to access a specific user's profile
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
@@ -126,8 +127,11 @@ class TemplateView(APIView):
                 'description': serializer.validated_data.get('description', ''),
                 'created_at': timezone.now().isoformat(),
                 'exercises': [{
-                    'exercise_id': exercise['exercise'].id,
-                    'name': exercise['exercise'].name,
+                    'exercise_id': exercise['exercise'].id if not exercise.get('is_custom') 
+                                else exercise['exercise']['id'],
+                    'name': exercise['exercise'].name if not exercise.get('is_custom')
+                            else exercise['exercise']['name'],
+                    'is_custom': exercise.get('is_custom', False),
                     'set_number': exercise['set_number'],
                     'reps': exercise.get('reps'),
                     'weight': exercise.get('weight'),
@@ -190,6 +194,7 @@ class TemplateView(APIView):
         request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+# This view is used to create and list workouts for the user
 class WorkoutView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = WorkoutSerializer
@@ -204,8 +209,13 @@ class WorkoutView(ListCreateAPIView):
             'description': serializer.validated_data.get('description', ''),
             'created_at': timezone.now().isoformat(),
             'exercises': [{
-                'exercise_id': exercise['exercise'].id,
-                'name': exercise['exercise'].name,
+                'exercise_id': (exercise['exercise'].id 
+                              if not exercise.get('is_custom') 
+                              else exercise['exercise']['id']),
+                'name': (exercise['exercise'].name 
+                        if not exercise.get('is_custom')
+                        else exercise['exercise']['name']),
+                'is_custom': exercise.get('is_custom', False),
                 'set_number': exercise['set_number'],
                 'reps': exercise.get('reps'),
                 'weight': exercise.get('weight'),
@@ -224,9 +234,25 @@ class WorkoutView(ListCreateAPIView):
         # PERSONAL RECORDS
         # Update PERSONAL RECORDS for each exercise
         for exercise in serializer.validated_data['exercises']:
+            # Get the correct exercise ID based on whether it's custom or not
+            exercise_id = (exercise['exercise'].id 
+                         if not exercise.get('is_custom') 
+                         else exercise['exercise']['id'])
+            
+            # Create a unique key for the PR that includes whether it's custom
+            pr_key = f"{'custom_' if exercise.get('is_custom') else ''}{exercise_id}"
+            
+            # Get exercise name based on type
+            exercise_name = (exercise['exercise'].name 
+                           if not exercise.get('is_custom')
+                           else exercise['exercise']['name'])
+            
             self.request.user.update_personal_records(
-                exercise['exercise'].id,
+                pr_key,
                 {
+                    'exercise_id': exercise_id,
+                    'is_custom': exercise.get('is_custom', False),
+                    'name': exercise_name,
                     'volume': exercise.get('volume', 0),
                     'one_rm': exercise.get('one_rm', 0),
                     'total_volume': exercise.get('total_volume', 0),
@@ -316,34 +342,39 @@ class CustomExerciseDetailView(generics.RetrieveUpdateDestroyAPIView):
 # View for handling personal records endpoints
 # This function is accessible in URLs.py API
 class PersonalRecordsView(APIView):
-    # Without this line, any user (even unauthenticated) could access personal records
     permission_classes = [IsAuthenticated]
     
-    # Without this method, the view wouldn't handle GET requests
     def get(self, request):
-        # Without this line, we wouldn't have access to the exercise names and types. Imported from models.py
+        # Initialize records dictionary
+        records = {}
+        
+        # Get all regular exercises
         exercises = ExerciseList.objects.all()
         
-        # Without this initialization, we'd get an error trying to add to records
-        records = {}
-
-        # Checks if the user has any personal records for each exercise
+        # Process regular exercises
         for exercise in exercises:
-            # Why convert to string?
-            # Because JSON only accepts string keys and exercise.id is an integer
             str_exercise_id = str(exercise.id)
-
-            # Without this check, we'd try to access non-existent records
+            # Check if there's a PR for this regular exercise
             if str_exercise_id in request.user.personal_records:
-                # Without these fields, the frontend wouldn't know which exercise the records belong to
-                # exercise.name and exercise.exercise_type makes it easier to identify the exercise
                 records[str_exercise_id] = {
                     'exercise_name': exercise.name,
                     'exercise_type': exercise.exercise_type,
-                    # Showcase the actual PR data
+                    'is_custom': False,
                     **request.user.personal_records[str_exercise_id]
                 }
+
+        # Process custom exercises
+        custom_exercises = request.user.custom_exercises or []
+        for custom_exercise in custom_exercises:
+            # Create the same key format used when saving PRs
+            custom_key = f"custom_{custom_exercise['id']}"
+            # Check if there's a PR for this custom exercise
+            if custom_key in request.user.personal_records:
+                records[custom_key] = {
+                    'exercise_name': custom_exercise['name'],
+                    'exercise_type': custom_exercise['exercise_type'],
+                    'is_custom': True,
+                    **request.user.personal_records[custom_key]
+                }
         
-        # Without Response(), Django wouldn't properly format the JSON response
-        # because Response() is a function that returns a object 
         return Response(records)

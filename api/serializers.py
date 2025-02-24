@@ -54,7 +54,11 @@ class ExerciseListSerializer(serializers.ModelSerializer):
 
 class WorkoutExerciseSerializer(serializers.Serializer):
     exercise_id = serializers.IntegerField(
-        help_text="ID of the exercise from the exercise list. Go to http://127.0.0.1:8000/api/exercises/ to get the list"
+        help_text="ID of the exercise (from either exercise list or custom exercises)"
+    )
+    is_custom = serializers.BooleanField(
+        default=False,
+        help_text="Set to true if this is a custom exercise"
     )
     reps = serializers.IntegerField(
         required=False, 
@@ -83,16 +87,32 @@ class WorkoutExerciseSerializer(serializers.Serializer):
     volume = serializers.FloatField(read_only=True)
     one_rm = serializers.FloatField(read_only=True)
 
-    # Validate if the exercise exists and contains the required fields based on the exercise type
     def validate(self, data):
         try:
-            exercise = ExerciseList.objects.get(id=data['exercise_id'])
+            if data.get('is_custom'):
+                # Get the user from the context
+                user = self.context['request'].user
+                # Look for the exercise in user's custom exercises
+                custom_exercises = user.custom_exercises or []
+                exercise = next(
+                    (ex for ex in custom_exercises if ex['id'] == data['exercise_id']),
+                    None
+                )
+                if not exercise:
+                    raise serializers.ValidationError("Custom exercise not found")
+                # For custom exercises, exercise_type is accessed from dictionary
+                exercise_type = exercise['exercise_type']
+            else:
+                # Look for the exercise in the normal exercise list
+                exercise = ExerciseList.objects.get(id=data['exercise_id'])
+                # For regular exercises, exercise_type is accessed from model instance
+                exercise_type = exercise.exercise_type
+
         except ExerciseList.DoesNotExist:
             raise serializers.ValidationError("Exercise not found")
 
         # TODO: Deal with type in the frontend
         # Validate based on exercise type
-        exercise_type = exercise.exercise_type
         if exercise_type in ['Dumbbell Exercises', 'Barbell Exercises', 'Machine-Based Workouts', 
                            'Kettlebell Workouts', 'Resistance Band Training', 'Cable Exercises']:
             if not data.get('reps'):
@@ -177,29 +197,33 @@ class WorkoutSerializer(serializers.Serializer):
 
         for exercise in exercises:
             exercise_id = exercise['exercise_id']
+            is_custom = exercise.get('is_custom', False)
+            
+            # Create unique key that includes custom status
+            exercise_key = f"{'custom_' if is_custom else ''}{exercise_id}"
             
             # Initialize tracking for new exercise
-            if exercise_id not in exercise_sets:
-                exercise_sets[exercise_id] = 1
-                exercise_volumes[exercise_id] = 0
-                exercise_durations[exercise_id] = 0
+            if exercise_key not in exercise_sets:
+                exercise_sets[exercise_key] = 1
+                exercise_volumes[exercise_key] = 0
+                exercise_durations[exercise_key] = 0
             else:
-                exercise_sets[exercise_id] += 1
+                exercise_sets[exercise_key] += 1
 
             # Add set number to exercise
-            exercise['set_number'] = exercise_sets[exercise_id]
+            exercise['set_number'] = exercise_sets[exercise_key]
             
             # Add current set's volume to total if it exists
             if 'volume' in exercise and exercise['volume'] is not None:
-                exercise_volumes[exercise_id] += exercise['volume']
+                exercise_volumes[exercise_key] += exercise['volume']
             
             # Add current set's duration to total if it exists
             if 'duration_minutes' in exercise and exercise['duration_minutes'] is not None:
-                exercise_durations[exercise_id] += exercise['duration_minutes']
+                exercise_durations[exercise_key] += exercise['duration_minutes']
             
             # Add total volume and duration for this exercise to each set
-            exercise['total_volume'] = exercise_volumes[exercise_id]
-            exercise['total_duration'] = exercise_durations[exercise_id]
+            exercise['total_volume'] = exercise_volumes[exercise_key]
+            exercise['total_duration'] = exercise_durations[exercise_key]
             
             processed_exercises.append(exercise)
 
@@ -207,7 +231,11 @@ class WorkoutSerializer(serializers.Serializer):
 
 class TemplateExerciseSerializer(serializers.Serializer):
     exercise_id = serializers.IntegerField(
-        help_text="ID of the exercise from the exercise list"
+        help_text="ID of the exercise (from either exercise list or custom exercises)"
+    )
+    is_custom = serializers.BooleanField(
+        default=False,
+        help_text="Set to true if this is a custom exercise"
     )
     reps = serializers.IntegerField(
         required=False, 
@@ -239,11 +267,29 @@ class TemplateExerciseSerializer(serializers.Serializer):
 
     def validate(self, data):
         try:
-            exercise = ExerciseList.objects.get(id=data['exercise_id'])
+            if data.get('is_custom'):
+                # Get the user from the context
+                user = self.context['request'].user
+                # Look for the exercise in user's custom exercises
+                custom_exercises = user.custom_exercises or []
+                exercise = next(
+                    (ex for ex in custom_exercises if ex['id'] == data['exercise_id']),
+                    None
+                )
+                if not exercise:
+                    raise serializers.ValidationError("Custom exercise not found")
+                # For custom exercises, exercise_type is accessed from dictionary
+                exercise_type = exercise['exercise_type']
+            else:
+                # Look for the exercise in the normal exercise list
+                exercise = ExerciseList.objects.get(id=data['exercise_id'])
+                # For regular exercises, exercise_type is accessed from model instance
+                exercise_type = exercise.exercise_type
+
         except ExerciseList.DoesNotExist:
             raise serializers.ValidationError("Exercise not found")
 
-        exercise_type = exercise.exercise_type
+        # Validate based on exercise type
         if exercise_type in ['Dumbbell Exercises', 'Barbell Exercises', 'Machine-Based Workouts', 
                            'Kettlebell Workouts', 'Resistance Band Training', 'Cable Exercises']:
             if not data.get('reps'):
@@ -299,29 +345,33 @@ class TemplateSerializer(serializers.Serializer):
 
         for exercise in exercises:
             exercise_id = exercise['exercise_id']
+            is_custom = exercise.get('is_custom', False)
+            
+            # Create unique key that includes custom status
+            exercise_key = f"{'custom_' if is_custom else ''}{exercise_id}"
             
             # Initialize tracking for new exercise
-            if exercise_id not in exercise_sets:
-                exercise_sets[exercise_id] = 1
-                exercise_volumes[exercise_id] = 0
-                exercise_durations[exercise_id] = 0
+            if exercise_key not in exercise_sets:
+                exercise_sets[exercise_key] = 1
+                exercise_volumes[exercise_key] = 0
+                exercise_durations[exercise_key] = 0
             else:
-                exercise_sets[exercise_id] += 1
+                exercise_sets[exercise_key] += 1
 
             # Add set number to exercise
-            exercise['set_number'] = exercise_sets[exercise_id]
+            exercise['set_number'] = exercise_sets[exercise_key]
             
             # Add current set's volume to total
             if 'volume' in exercise:
-                exercise_volumes[exercise_id] += exercise['volume']
+                exercise_volumes[exercise_key] += exercise['volume']
             
             # Add current set's duration to total
             if 'duration_minutes' in exercise:
-                exercise_durations[exercise_id] += exercise['duration_minutes']
+                exercise_durations[exercise_key] += exercise['duration_minutes']
             
             # Add total volume and duration for this exercise to each set
-            exercise['total_volume'] = exercise_volumes[exercise_id]
-            exercise['total_duration'] = exercise_durations[exercise_id]
+            exercise['total_volume'] = exercise_volumes[exercise_key]
+            exercise['total_duration'] = exercise_durations[exercise_key]
             
             processed_exercises.append(exercise)
 
